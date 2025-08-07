@@ -1,4 +1,4 @@
-package inspect
+package endpoint
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/guionardo/go-router/pkg/logging"
+	reflections "github.com/guionardo/go-router/pkg/reflect"
 )
 
 type structCache struct {
@@ -14,24 +15,22 @@ type structCache struct {
 	structs map[string]any
 }
 
-var (
-	pool = &structCache{
-		structs: map[string]any{},
-	}
-)
+var pool = &structCache{
+	structs: map[string]any{},
+}
 
-func inspectStructGet[T, R any]() (*InspectStruct[T, R], reflect.Type, error) {
+func getEndpoint[T, R any]() (*Endpoint[T, R], reflect.Type, error) {
 	t := reflect.TypeFor[T]()
 	pool.lock.RLock()
 	defer pool.lock.RUnlock()
 	if is, ok := pool.structs[t.Name()]; ok {
-		return is.(*InspectStruct[T, R]), t, nil
+		return is.(*Endpoint[T, R]), t, nil
 	}
-	if !IsStruct[T]() {
+	if !reflections.IsStruct[T]() {
 		logging.Get().Warn("inspectStructget: expected a struct", slog.String("type", t.Name()))
 		return nil, t, fmt.Errorf("expected a struct to make an InspectStruct. Got %s", t.Name())
 	}
-	var is = &InspectStruct[T, R]{
+	var is = &Endpoint[T, R]{
 		reqType: t,
 	}
 
@@ -42,7 +41,7 @@ func inspectStructGet[T, R any]() (*InspectStruct[T, R], reflect.Type, error) {
 	return is, t, nil
 }
 
-func poolSet[T, R any](t reflect.Type, is *InspectStruct[T, R]) {
+func setEndpoint[T, R any](t reflect.Type, is *Endpoint[T, R]) {
 	pool.lock.Lock()
 	defer pool.lock.Unlock()
 	if is == nil {

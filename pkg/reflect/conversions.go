@@ -1,4 +1,4 @@
-package inspect
+package reflections
 
 import (
 	"fmt"
@@ -16,14 +16,14 @@ func stringToInt(v string) int {
 	return iv
 }
 
-func boolValue[T comparable](v bool, vTrue, vFalse T) T {
+func BoolValue[T comparable](v bool, vTrue, vFalse T) T {
 	if v {
 		return vTrue
 	}
 	return vFalse
 }
 
-func strToTime(v string) (time.Time, error) {
+func StrToTime(v string) (time.Time, error) {
 	for _, templates := range []string{time.RFC1123, time.RFC3339, time.DateTime, time.DateOnly, time.TimeOnly} {
 		if tv, err := time.Parse(templates, v); err == nil {
 			return tv, nil

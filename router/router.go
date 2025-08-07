@@ -7,14 +7,14 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/guionardo/go-router/pkg/inspect"
+	"github.com/guionardo/go-router/endpoint"
 	"github.com/guionardo/go-router/pkg/logging"
 )
 
 type (
 	Router struct {
 		info      *RouterInfo
-		endpoints map[string]map[string]inspect.HandlerStruct
+		endpoints map[string]map[string]endpoint.HandlerStruct
 	}
 	RouterOption func(*Router)
 )
@@ -22,7 +22,7 @@ type (
 func New(options ...RouterOption) *Router {
 	r := &Router{
 		info:      &RouterInfo{},
-		endpoints: make(map[string]map[string]inspect.HandlerStruct),
+		endpoints: make(map[string]map[string]endpoint.HandlerStruct),
 	}
 	for _, option := range options {
 		option(r)
@@ -30,19 +30,19 @@ func New(options ...RouterOption) *Router {
 	return r
 }
 
-func (r *Router) Add(method string, endpoint inspect.HandlerStruct) *Router {
+func (r *Router) Add(method string, ep endpoint.HandlerStruct) *Router {
 	method = strings.ToUpper(method)
 	msh, ok := r.endpoints[method]
 	if !ok {
-		msh = make(map[string]inspect.HandlerStruct)
+		msh = make(map[string]endpoint.HandlerStruct)
 		r.endpoints[method] = msh
 	}
-	msh[endpoint.GetPath()] = endpoint
+	msh[ep.GetPath()] = ep
 
 	return r
 }
 
-func (r *Router) Get(endpoints ...inspect.HandlerStruct) *Router {
+func (r *Router) Get(endpoints ...endpoint.HandlerStruct) *Router {
 	for _, endpoint := range endpoints {
 		r.Add(http.MethodGet, endpoint)
 	}

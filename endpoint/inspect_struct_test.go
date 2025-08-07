@@ -1,11 +1,10 @@
-package inspect
+package endpoint
 
 import (
 	"bytes"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"testing"
 	"time"
 
@@ -31,57 +30,19 @@ func (ts *TestStruct) Validate() error {
 	return nil
 }
 
-func Test_newValue(t *testing.T) {
-
-	tests := []struct {
-		name    string
-		value   any
-		kind    reflect.Value
-		want    reflect.Value
-		wantErr bool
-	}{
-		{
-			name:  "string to bool",
-			value: "true",
-
-			want:    reflect.ValueOf(true),
-			wantErr: false,
-		},
-		{
-			name:    "string to time",
-			value:   "2025-07-30 20:00:00",
-			want:    reflect.ValueOf(time.Date(2025, 7, 30, 20, 0, 0, 0, time.UTC)),
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-
-			got, err := newValue(tt.value, tt.want)
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("newValue() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("newValue() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestNew(t *testing.T) {
 	t.Run("invalid_struct_dont_implements_expected_interfaces_should_fail", func(t *testing.T) {
 		type InvalidStruct struct {
 			None int
 		}
-		_, err := New[InvalidStruct, RespStruct]("/ping")
-		assert.Error(t, err)
+		assert.Panics(t, func() {
+			_ = New[InvalidStruct, RespStruct]("/ping")
+		})
 	})
 
 	t.Run("get_request_should_succeed", func(t *testing.T) {
-		inspectStruct, err := New[TestStruct, RespStruct]("/test/:id")
-		if !assert.NoError(t, err) || !assert.NotNil(t, inspectStruct) {
+		inspectStruct := New[TestStruct, RespStruct]("/test/:id")
+		if !assert.NotNil(t, inspectStruct) {
 			return
 		}
 		req := httptest.NewRequest(http.MethodGet, "/test/1234?option=9874343&date=2025-07-30", nil)
@@ -94,12 +55,12 @@ func TestNew(t *testing.T) {
 		assert.Equal(t, time.Date(2025, 7, 30, 0, 0, 0, 0, time.UTC), s.Date)
 	})
 	t.Run("get_request_without_required_field_should_fail", func(t *testing.T) {
-		inspectStruct, err := New[TestStruct, RespStruct]("/test/:id")
-		if !assert.NoError(t, err) || !assert.NotNil(t, inspectStruct) {
+		inspectStruct := New[TestStruct, RespStruct]("/test/:id")
+		if !assert.NotNil(t, inspectStruct) {
 			return
 		}
 		req := httptest.NewRequest(http.MethodGet, "/test/1234?option=9874343&date=2025-07-30", nil)
-		_, err = inspectStruct.Parse(req)
+		_, err := inspectStruct.Parse(req)
 		assert.Error(t, err)
 	})
 
@@ -108,8 +69,8 @@ func TestNew(t *testing.T) {
 			ID   int    `path:"id"`
 			Body []byte `body:"body"`
 		}
-		inspectStruct, err := New[TestBodyStruct, RespStruct]("/test/:id")
-		if !assert.NoError(t, err) || !assert.NotNil(t, inspectStruct) {
+		inspectStruct := New[TestBodyStruct, RespStruct]("/test/:id")
+		if !assert.NotNil(t, inspectStruct) {
 			return
 		}
 		req := httptest.NewRequest(http.MethodGet, "/test/22", bytes.NewBuffer([]byte{1, 2, 3, 4, 5, 6}))
@@ -124,8 +85,8 @@ func TestNew(t *testing.T) {
 			ID   int    `path:"id"`
 			Body string `body:"body"`
 		}
-		inspectStruct, err := New[TestBodyStruct, RespStruct]("/test/:id")
-		if !assert.NoError(t, err) || !assert.NotNil(t, inspectStruct) {
+		inspectStruct := New[TestBodyStruct, RespStruct]("/test/:id")
+		if !assert.NotNil(t, inspectStruct) {
 			return
 		}
 		req := httptest.NewRequest(http.MethodGet, "/test/22", bytes.NewBufferString("SOME CONTENT\nHELLO"))
@@ -145,8 +106,12 @@ func TestNew(t *testing.T) {
 			ID   int     `path:"id"`
 			Body SubBody `body:"body"`
 		}
-		inspectStruct, err := New[TestBodyStruct, RespStruct]("/test/:id")
-		if !assert.NoError(t, err) || !assert.NotNil(t, inspectStruct) {
+		var inspectStruct *Endpoint[TestBodyStruct, RespStruct]
+		assert.NotPanics(t, func() {
+			inspectStruct = New[TestBodyStruct, RespStruct]("/test/:id")
+		})
+
+		if !assert.NotNil(t, inspectStruct) {
 			return
 		}
 		req := httptest.NewRequest(http.MethodGet, "/test/25", bytes.NewBufferString("{\"name\":\"Guionardo\",\"age\":48}"))
@@ -161,8 +126,8 @@ func TestNew(t *testing.T) {
 			ID   int            `path:"id"`
 			Body map[string]any `body:"body"`
 		}
-		inspectStruct, err := New[TestBodyStruct, RespStruct]("/test/:id")
-		if !assert.NoError(t, err) || !assert.NotNil(t, inspectStruct) {
+		inspectStruct := New[TestBodyStruct, RespStruct]("/test/:id")
+		if !assert.NotNil(t, inspectStruct) {
 			return
 		}
 		req := httptest.NewRequest(http.MethodGet, "/test/25", bytes.NewBufferString("{\"name\":\"Guionardo\",\"age\":48}"))

@@ -1,4 +1,4 @@
-package inspect
+package endpoint
 
 import (
 	"encoding/json"
@@ -7,10 +7,11 @@ import (
 	"time"
 
 	"github.com/guionardo/go-router/pkg/config"
+	"github.com/guionardo/go-router/pkg/errors"
 	"github.com/guionardo/go-router/pkg/logging"
 )
 
-func (s *InspectStruct[T, R]) Handle(w http.ResponseWriter, r *http.Request) {
+func (s *Endpoint[T, R]) Handle(w http.ResponseWriter, r *http.Request) {
 	payload, err := s.Parse(r)
 	if err != nil {
 		answerError(w, err)
@@ -20,7 +21,7 @@ func (s *InspectStruct[T, R]) Handle(w http.ResponseWriter, r *http.Request) {
 }
 
 func answerError(w http.ResponseWriter, err error) {
-	pe := NewParseError(err)
+	pe := errors.NewParseError(err)
 	w.Header().Add("Content-Type", "application/json")
 	status := http.StatusBadRequest
 	if responseErr, ok := err.(responseError); ok && status <= 0 {
@@ -34,7 +35,7 @@ func answerError(w http.ResponseWriter, err error) {
 	json.NewEncoder(w).Encode(pe)
 }
 
-func (s *InspectStruct[T, R]) handleCustom(w http.ResponseWriter, r *http.Request, payload *T) error {
+func (s *Endpoint[T, R]) handleCustom(w http.ResponseWriter, r *http.Request, payload *T) error {
 	startTime := time.Now()
 	if err := s.customResponser.Handle(w, r, payload); err != nil {
 		var statusCode any
@@ -54,7 +55,7 @@ func (s *InspectStruct[T, R]) handleCustom(w http.ResponseWriter, r *http.Reques
 	return nil
 }
 
-func (s *InspectStruct[T, R]) handleSimple(w http.ResponseWriter, r *http.Request, payload *T) error {
+func (s *Endpoint[T, R]) handleSimple(w http.ResponseWriter, r *http.Request, payload *T) error {
 	if config.DevelopmentMode {
 		w.Header().Add("X-Router-Request-Type", s.reqType.String())
 		w.Header().Add("X-Router-Response-Type", s.respType.String())

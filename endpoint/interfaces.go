@@ -1,6 +1,10 @@
-package inspect
+package endpoint
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/go-playground/validator"
+)
 
 type (
 	HandlerStruct interface {
@@ -13,5 +17,19 @@ type (
 	}
 	CustomResponser[T any, R any] interface {
 		Handle(w http.ResponseWriter, r *http.Request, payload *T) error
+	}
+	customValidator interface {
+		Validate() error
+	}
+	postParser interface {
+		PostParse(error) error
+	}
+	setupValidator interface {
+		NewValidator() *validator.Validate
+	}
+
+	responseError interface {
+		Error() string
+		StatusCode() int
 	}
 )

@@ -1,4 +1,4 @@
-package router
+package errors
 
 import (
 	"errors"
@@ -8,13 +8,22 @@ import (
 	"github.com/guionardo/go-router/pkg/config"
 )
 
-type Error struct {
-	err        error
-	statusCode int
+type (
+	Error struct {
+		err        error
+		statusCode int
 
-	Message string `json:"message,omitempty"`
-	Status  int    `json:"status_code,omitempty"`
-}
+		Message string `json:"message,omitempty"`
+		Status  int    `json:"status_code,omitempty"`
+	}
+
+	ParseErrorStruct struct {
+		Errors []string `json:"parsing_errors,omitempty"`
+	}
+	Unwrapper interface {
+		Unwrap() []error
+	}
+)
 
 func (e *Error) Error() string {
 	return fmt.Sprintf("status: %d - %s, error: %s", e.statusCode, http.StatusText(e.statusCode), e.err.Error())
@@ -37,4 +46,23 @@ func NewError(statusCode int, err error) *Error {
 
 func NewErrorF(statusCode int, format string, args ...any) *Error {
 	return NewError(statusCode, fmt.Errorf(format, args...))
+}
+
+func NewParseError(err error) *ParseErrorStruct {
+	if err == nil {
+		return nil
+	}
+	var errors []string
+	if uw, ok := err.(Unwrapper); ok {
+		errs := uw.Unwrap()
+		if len(errs) > 0 {
+			errors = make([]string, len(errs))
+			for i, e := range errs {
+				errors[i] = e.Error()
+			}
+		}
+	} else {
+		errors = []string{err.Error()}
+	}
+	return &ParseErrorStruct{errors}
 }

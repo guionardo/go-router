@@ -6,26 +6,138 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPathParams_Inject(t *testing.T) {
-	type PL struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-		Age  int    `json:"age"`
-	}
-	pp := &PathParams{
-		params: map[string]string{
-			"id":   "123",
-			"name": "john",
+func Test_createRegexFromPattern(t *testing.T) {
+	tests := []struct {
+		name          string
+		pattern       string
+		expectedNames []string
+		testURL       string
+		shouldMatch   bool
+	}{
+		{
+			name:          "no_pattern",
+			pattern:       "/users",
+			expectedNames: nil,
+			testURL:       "/users",
+			shouldMatch:   true,
 		},
-		paramsNames: []string{"id", "name"},
-		regex:       nil,
+		{
+			name:          "basic_pattern_gin",
+			pattern:       "/users/{id}",
+			expectedNames: []string{"id"},
+			testURL:       "/users/123",
+			shouldMatch:   true,
+		},
+		{
+			name:          "multiple_parameters_gin",
+			pattern:       "/users/{userId}/posts/{postId}",
+			expectedNames: []string{"userId", "postId"},
+			testURL:       "/users/123/posts/456",
+			shouldMatch:   true,
+		},
+		{
+			name:          "no match",
+			pattern:       "/users/{id}",
+			expectedNames: []string{"id"},
+			testURL:       "/posts/123",
+			shouldMatch:   false,
+		},
+		{
+			name:          "basic pattern",
+			pattern:       "/users/:id",
+			expectedNames: []string{"id"},
+			testURL:       "/users/123",
+			shouldMatch:   true,
+		},
+		{
+			name:          "multiple parameters",
+			pattern:       "/users/:userId/posts/:postId",
+			expectedNames: []string{"userId", "postId"},
+			testURL:       "/users/123/posts/456",
+			shouldMatch:   true,
+		},
+		{
+			name:          "no match",
+			pattern:       "/users/:id",
+			expectedNames: []string{"id"},
+			testURL:       "/posts/123",
+			shouldMatch:   false,
+		},
 	}
-	pl := &PL{
-		Age: 20,
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			regex, names, err := createRegexFromPattern(tt.pattern)
+			if !assert.NoError(t, err) {
+				return
+			}
+			if !assert.Equal(t, tt.expectedNames, names) {
+				return
+			}
+
+			if regex != nil {
+
+				matches := regex.MatchString(tt.testURL)
+				assert.Equal(t, tt.shouldMatch, matches)
+				if tt.shouldMatch {
+					assert.Equal(t, tt.shouldMatch, matches, "expected match %t for URL %s, got %t", tt.shouldMatch, tt.testURL, matches)
+				}
+			}
+		})
 	}
-	err := pp.Inject(&pl)
-	assert.NoError(t, err)
-	assert.Equal(t, "123", pl.ID)
-	assert.Equal(t, "john", pl.Name)
-	assert.Equal(t, 20, pl.Age)
+}
+
+func TestGetPathParamsNames(t *testing.T) {
+	tests := []struct {
+		name          string
+		pattern       string
+		expectedNames []string
+		wantErr       bool
+	}{
+		{
+			name:          "no_pattern",
+			pattern:       "/users",
+			expectedNames: []string{},
+		},
+		{
+			name:          "basic_pattern_gin",
+			pattern:       "/users/{id}",
+			expectedNames: []string{"id"},
+		},
+		{
+			name:          "multiple_parameters_gin",
+			pattern:       "/users/{userId}/posts/{postId}",
+			expectedNames: []string{"userId", "postId"},
+		},
+		{
+			name:          "no match",
+			pattern:       "/users/{id}",
+			expectedNames: []string{"id"},
+		},
+		{
+			name:          "basic pattern",
+			pattern:       "/users/:id",
+			expectedNames: []string{"id"},
+		},
+		{
+			name:          "multiple parameters",
+			pattern:       "/users/:userId/posts/:postId",
+			expectedNames: []string{"userId", "postId"},
+		},
+		{
+			name:          "no match",
+			pattern:       "/users/:id",
+			expectedNames: []string{"id"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := GetPathParamsNames(tt.pattern)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetPathParamsNames() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			assert.Equal(t, tt.expectedNames, got)
+		})
+	}
 }
