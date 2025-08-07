@@ -2,8 +2,10 @@ package endpoint
 
 import (
 	"errors"
+	"maps"
 	"net/http"
 	"reflect"
+	"slices"
 )
 
 type (
@@ -77,4 +79,8 @@ func (s *Endpoint[T, R]) GetPath() string {
 
 func (s *Endpoint[T, R]) HandlerName() string {
 	return s.reqType.String()
+}
+
+func (s *Endpoint[T, R]) PathParams() []string {
+	return slices.Collect(maps.Keys(s.paths))
 }

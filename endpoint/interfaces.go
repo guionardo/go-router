@@ -11,6 +11,7 @@ type (
 		GetPath() string
 		Handle(http.ResponseWriter, *http.Request)
 		HandlerName() string
+		PathParams() []string
 	}
 	Responser[T any, R any] interface {
 		Handle(r *http.Request, payload *T) (response *R, status int, err error)

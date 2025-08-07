@@ -1,6 +1,7 @@
 package path_params
 
 import (
+	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
@@ -11,6 +12,29 @@ func GetPathParamsNames(pattern string) ([]string, error) {
 	return paramsNames, err
 }
 
+func InvalidatePathToGin(pattern string) (string, error) {
+	_, paramsNames, err := createRegexFromPattern(pattern)
+	if err != nil {
+		return "", err
+	}
+	ip := pattern
+	for _, pn := range paramsNames {
+		ip = strings.ReplaceAll(ip, fmt.Sprintf("{%s}", pn), fmt.Sprintf(":%s", pn))
+	}
+	return ip, nil
+}
+
+func InvalidatePathToHttp(pattern string) (string, error) {
+	_, paramsNames, err := createRegexFromPattern(pattern)
+	if err != nil {
+		return "", err
+	}
+	ip := pattern
+	for _, pn := range paramsNames {
+		ip = strings.ReplaceAll(ip, fmt.Sprintf(":%s", pn), fmt.Sprintf("{%s}", pn))
+	}
+	return ip, nil
+}
 func createRegexFromPattern(pattern string) (*regexp.Regexp, []string, error) {
 	url, err := url.Parse(pattern)
 	if err != nil {

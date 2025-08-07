@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/guionardo/go-router/endpoint"
 	"github.com/guionardo/go-router/pkg/logging"
+	"github.com/guionardo/go-router/pkg/path_params"
 )
 
 type (
@@ -62,9 +63,18 @@ func (r *Router) SetupGin(h *gin.Engine) {
 	for method, handlers := range r.endpoints {
 		for path, handler := range handlers {
 			logging.Get().Debug("Route", slog.String("method", method), slog.String("path", path), slog.String("handler", handler.HandlerName()))
-			h.Handle(method, path, func(c *gin.Context) {
-				handler.Handle(c.Writer, c.Request)
-			})
+			// TODO: Fix path to use :params
+			path, err := path_params.InvalidatePathToGin(path)
+			if err == nil {
+				h.Handle(method, path, func(c *gin.Context) {
+					// Fix params into http.Request from gin.Context
+					for _, pp := range handler.PathParams() {
+						c.Request.SetPathValue(pp, c.Param(pp))
+					}
+
+					handler.Handle(c.Writer, c.Request)
+				})
+			}
 		}
 	}
 }

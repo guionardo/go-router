@@ -2,19 +2,8 @@ package reflections
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 )
-
-func stringToBool(v string) bool {
-	bv, _ := strconv.ParseBool(v)
-	return bv
-}
-
-func stringToInt(v string) int {
-	iv, _ := strconv.Atoi(v)
-	return iv
-}
 
 func BoolValue[T comparable](v bool, vTrue, vFalse T) T {
 	if v {
