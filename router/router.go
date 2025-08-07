@@ -2,11 +2,13 @@ package router
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/guionardo/go-router/pkg/inspect"
+	"github.com/guionardo/go-router/pkg/logging"
 )
 
 type (
@@ -40,13 +42,17 @@ func (r *Router) Add(method string, endpoint inspect.HandlerStruct) *Router {
 	return r
 }
 
-func (r *Router) Get(endpoint inspect.HandlerStruct) *Router {
-	return r.Add(http.MethodGet, endpoint)
+func (r *Router) Get(endpoints ...inspect.HandlerStruct) *Router {
+	for _, endpoint := range endpoints {
+		r.Add(http.MethodGet, endpoint)
+	}
+	return r
 }
 
 func (r *Router) SetupHTTP(h *http.ServeMux) {
 	for method, handlers := range r.endpoints {
 		for path, handler := range handlers {
+			logging.Get().Debug("Route", slog.String("method", method), slog.String("path", path), slog.String("handler", handler.HandlerName()))
 			h.HandleFunc(fmt.Sprintf("%s %s", method, path), handler.Handle)
 		}
 	}
@@ -55,6 +61,7 @@ func (r *Router) SetupHTTP(h *http.ServeMux) {
 func (r *Router) SetupGin(h *gin.Engine) {
 	for method, handlers := range r.endpoints {
 		for path, handler := range handlers {
+			logging.Get().Debug("Route", slog.String("method", method), slog.String("path", path), slog.String("handler", handler.HandlerName()))
 			h.Handle(method, path, func(c *gin.Context) {
 				handler.Handle(c.Writer, c.Request)
 			})

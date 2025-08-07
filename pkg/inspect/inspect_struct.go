@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"reflect"
 	"runtime"
@@ -16,8 +15,6 @@ import (
 	"time"
 
 	"github.com/go-playground/validator"
-	"github.com/guionardo/go-router/pkg/config"
-	"github.com/guionardo/go-router/pkg/logging"
 	"github.com/guionardo/go-router/pkg/path_params"
 	"gopkg.in/yaml.v3"
 )
@@ -27,20 +24,20 @@ type (
 		path          string
 		pathParams    *path_params.PathParams
 		useValidation bool
-		payload       *T
 		raw           []byte
 		paths         map[string]int
 		queries       map[string]int
 		headers       map[string]int
 		bodyField     string
 		bodyParseType bodyParseType
-		typeName      string
+		reqType       reflect.Type
+		respType      reflect.Type
 
-		parseBodyFunc    func(*http.Request) error
-		parsePathFunc    func(*http.Request) error
-		parseQueriesFunc func(*http.Request) error
-		parseHeadersFunc func(*http.Request) error
-		validateFunc     func(*http.Request) error
+		parseBodyFunc    func(*http.Request, *T) error
+		parsePathFunc    func(*http.Request, *T) error
+		parseQueriesFunc func(*http.Request, *T) error
+		parseHeadersFunc func(*http.Request, *T) error
+		validateFunc     func(*http.Request, *T) error
 
 		isCustomValidator bool
 		isPostParser      bool
@@ -49,16 +46,10 @@ type (
 
 		responser       Responser[T, R]
 		customResponser CustomResponser[T, R]
-		handlerFunc     func(http.ResponseWriter, *http.Request, *T)
+		handlerFunc     func(http.ResponseWriter, *http.Request, *T) error
 		handlerName     string
 	}
 
-	Responser[T any, R any] interface {
-		Handle(r *http.Request, payload *T) (response *R, status int, err error)
-	}
-	CustomResponser[T any, R any] interface {
-		Handle(w http.ResponseWriter, r *http.Request, payload *T) error
-	}
 	customValidator interface {
 		Validate() error
 	}
@@ -109,44 +100,14 @@ func New[T, R any](path string) (is *InspectStruct[T, R], err error) {
 func (s *InspectStruct[T, R]) GetPath() string {
 	return s.path
 }
-func (s *InspectStruct[T, R]) Parse(r *http.Request) (*T, error) {
-	s.payload = new(T)
-	var err error
-	for _, f := range []func(*http.Request) error{
-		s.parseBodyFunc,
-		s.parsePathFunc,
-		s.parseQueriesFunc,
-		s.parseHeadersFunc,
-		s.validateFunc} {
-		if err = f(r); err != nil {
-			break
-		}
-	}
 
-	err = s.customValidate()
-	err = s.postParse(err)
-	return s.payload, err
+func (s *InspectStruct[T, R]) HandlerName() string {
+	return s.reqType.String()
 }
 
-func (s *InspectStruct[T, R]) customValidate() error {
-	var is any = s.payload
-	if cv, ok := is.(customValidator); ok {
-		return cv.Validate()
-	}
-	return nil
-
-}
-func (s *InspectStruct[T, R]) postParse(err error) error {
-	var is any = s.payload
-	if pp, ok := is.(postParser); ok {
-		return pp.PostParse(err)
-	}
-	return err
-}
-
-func reqFunc(condition bool, rf func(*http.Request) error) func(*http.Request) error {
+func reqFunc[T any](condition bool, rf func(*http.Request, *T) error) func(*http.Request, *T) error {
 	if !condition {
-		return func(*http.Request) error {
+		return func(*http.Request, *T) error {
 			return nil
 		}
 	}
@@ -155,22 +116,15 @@ func reqFunc(condition bool, rf func(*http.Request) error) func(*http.Request) e
 
 func buildStruct[T, R any](t reflect.Type, path string) (*InspectStruct[T, R], error) {
 	is := &InspectStruct[T, R]{
-		typeName: t.Name(),
+		reqType:  t,
+		respType: reflect.TypeFor[R](),
 		path:     path,
 	}
-	var si any = new(T)
-
-	if cr, isCustomResponser := si.(CustomResponser[T, R]); isCustomResponser {
-		is.handlerName = runtime.FuncForPC(reflect.ValueOf(cr.Handle).Pointer()).Name()
-		is.handlerFunc = is.handleCustom
-	} else if sr, isSimpleResponser := si.(Responser[T, R]); isSimpleResponser {
-		is.handlerName = runtime.FuncForPC(reflect.ValueOf(sr.Handle).Pointer()).Name()
-		is.handlerFunc = is.handleSimple
-	} else {
-		tcr := reflect.TypeFor[CustomResponser[T, R]]()
-		tsr := reflect.TypeFor[Responser[T, R]]()
-		return nil, fmt.Errorf("type %s should implements interfaces %s or %s", t.Name(), tcr.Name(), tsr.Name())
+	t.PkgPath()
+	if err := is.buildResponser(); err != nil {
+		return nil, err
 	}
+	var si any = new(T)
 
 	useValidation := false
 	var (
@@ -296,25 +250,25 @@ func extractTag(tag reflect.StructTag, name string) (value string, extra []strin
 	return w[0], w[1:], nil
 }
 
-func (s *InspectStruct[T, R]) parseBody(r *http.Request) (err error) {
+func (s *InspectStruct[T, R]) parseBody(r *http.Request, payload *T) (err error) {
 	switch s.bodyParseType {
 	case BodyNo:
 		return nil
 	case BodyBytes:
-		return s.parseBodyBytes(r)
+		return s.parseBodyBytes(r, payload)
 	case BodyString:
-		return s.parseBodyString(r)
+		return s.parseBodyString(r, payload)
 	case BodyJSON:
-		return s.parseBodyJSON(r)
+		return s.parseBodyJSON(r, payload)
 	}
 
 	switch r.Header.Get("Content-Type") {
 	case ContentJSON:
-		err = json.NewDecoder(r.Body).Decode(s.payload)
+		err = json.NewDecoder(r.Body).Decode(payload)
 	case ContentYAML:
-		err = yaml.NewDecoder(r.Body).Decode(s.payload)
+		err = yaml.NewDecoder(r.Body).Decode(payload)
 	case ContentXML:
-		err = xml.NewDecoder(r.Body).Decode(s.payload)
+		err = xml.NewDecoder(r.Body).Decode(payload)
 	default:
 		body, err := io.ReadAll(r.Body)
 		if err == nil {
@@ -323,13 +277,12 @@ func (s *InspectStruct[T, R]) parseBody(r *http.Request) (err error) {
 	}
 	if err != nil {
 		s.raw = nil
-		s.payload = nil
 	}
 	return err
 }
 
-func (s *InspectStruct[T, R]) parseBodyBytes(r *http.Request) (err error) {
-	v := reflect.ValueOf(s.payload).Elem()
+func (s *InspectStruct[T, R]) parseBodyBytes(r *http.Request, payload *T) (err error) {
+	v := reflect.ValueOf(payload).Elem()
 	field := v.FieldByName(s.bodyField)
 	if field.IsValid() && field.CanSet() {
 		var body []byte
@@ -344,8 +297,8 @@ func (s *InspectStruct[T, R]) parseBodyBytes(r *http.Request) (err error) {
 	return err
 }
 
-func (s *InspectStruct[T, R]) parseBodyString(r *http.Request) (err error) {
-	v := reflect.ValueOf(s.payload).Elem()
+func (s *InspectStruct[T, R]) parseBodyString(r *http.Request, payload *T) (err error) {
+	v := reflect.ValueOf(payload).Elem()
 	field := v.FieldByName(s.bodyField)
 	if field.IsValid() && field.CanSet() {
 		var body []byte
@@ -360,18 +313,22 @@ func (s *InspectStruct[T, R]) parseBodyString(r *http.Request) (err error) {
 	return err
 }
 
-func (s *InspectStruct[T, R]) parseBodyJSON(r *http.Request) (err error) {
-	v := reflect.ValueOf(s.payload).Elem()
+func (s *InspectStruct[T, R]) parseBodyJSON(r *http.Request, payload *T) (err error) {
+	v := reflect.ValueOf(payload).Elem()
 	field := v.FieldByName(s.bodyField)
 	if field.IsValid() && field.CanSet() {
 		s := reflect.New(field.Type()).Interface()
-		var body []byte
-		if body, err = io.ReadAll(r.Body); err == nil {
-			r.Body.Close()
-			if err = json.Unmarshal(body, s); err == nil {
-				vs := reflect.ValueOf(s).Elem()
-				field.Set(vs)
-			}
+		if err = json.NewDecoder(r.Body).Decode(s); err == nil {
+			vs := reflect.ValueOf(s).Elem()
+			field.Set(vs)
+
+			// var body []byte
+			// if body, err = io.ReadAll(r.Body); err == nil {
+			// 	r.Body.Close()
+			// 	if err = json.Unmarshal(body, s); err == nil {
+			// 		vs := reflect.ValueOf(s).Elem()
+			// 		field.Set(vs)
+			// 	}
 
 		} else {
 			err = fmt.Errorf("field '%s' is not valid or cannot be set", field.Type().Name())
@@ -381,23 +338,33 @@ func (s *InspectStruct[T, R]) parseBodyJSON(r *http.Request) (err error) {
 	return err
 }
 
-func (s *InspectStruct[T, R]) parsePath(r *http.Request) (err error) {
-	if err := s.pathParams.Match(r.URL); err != nil {
-		return err
-	}
-	for key, value := range s.pathParams.GetAll() {
-		index := s.paths[key]
-		if err := s.inject(index, value); err != nil {
+func (s *InspectStruct[T, R]) parsePath(r *http.Request, payload *T) (err error) {
+	for pathParam, index := range s.paths {
+		if value := r.PathValue(pathParam); len(value) > 0 {
+			err = s.inject(payload, index, value)
+		} else {
+			err = fmt.Errorf("expected value for '%s' path parameter", pathParam)
+		}
+		if err != nil {
 			return err
 		}
 	}
+	// if err := s.pathParams.Match(r.URL); err != nil {
+	// 	return err
+	// }
+	// for key, value := range s.pathParams.GetAll() {
+	// 	index := s.paths[key]
+	// 	if err := s.inject(index, value); err != nil {
+	// 		return err
+	// 	}
+	// }
 	return nil
 }
 
-func (s *InspectStruct[T, R]) parseQuery(r *http.Request) (err error) {
+func (s *InspectStruct[T, R]) parseQuery(r *http.Request, payload *T) (err error) {
 	for key, index := range s.queries {
 		if value := r.URL.Query().Get(key); len(value) > 0 {
-			if err = s.inject(index, value); err != nil {
+			if err = s.inject(payload, index, value); err != nil {
 				return err
 			}
 		}
@@ -405,10 +372,10 @@ func (s *InspectStruct[T, R]) parseQuery(r *http.Request) (err error) {
 	return nil
 }
 
-func (s *InspectStruct[T, R]) parseHeaders(r *http.Request) (err error) {
+func (s *InspectStruct[T, R]) parseHeaders(r *http.Request, payload *T) (err error) {
 	for key, index := range s.headers {
 		if value := r.Header.Get(key); len(value) > 0 {
-			if err = s.inject(index, value); err != nil {
+			if err = s.inject(payload, index, value); err != nil {
 				return err
 			}
 		}
@@ -416,8 +383,8 @@ func (s *InspectStruct[T, R]) parseHeaders(r *http.Request) (err error) {
 	return nil
 }
 
-func (s *InspectStruct[T, R]) inject(index int, value any) error {
-	rv := reflect.ValueOf(s.payload).Elem() // payload is always a pointer
+func (s *InspectStruct[T, R]) inject(payload *T, index int, value any) error {
+	rv := reflect.ValueOf(payload).Elem() // payload is always a pointer
 	f := rv.Field(index)
 	nv, err := newValue(value, f)
 	if err == nil {
@@ -471,9 +438,9 @@ func newValue(value any, field reflect.Value) (reflect.Value, error) {
 	return reflect.ValueOf(nil), fmt.Errorf("unexpected convertion %s to %s", reflect.TypeOf(value).Name(), kind.String())
 }
 
-func (s *InspectStruct[T, R]) validate(r *http.Request) error {
+func (s *InspectStruct[T, R]) validate(r *http.Request, payload *T) error {
 	var (
-		si  any = s.payload
+		si  any = payload
 		val *validator.Validate
 	)
 	if s.isSetupValidator {
@@ -483,46 +450,35 @@ func (s *InspectStruct[T, R]) validate(r *http.Request) error {
 	}
 
 	if val == nil {
-		return fmt.Errorf("struct '%s' implements the method NewValidator() *validator.Validate but returned nil", s.typeName)
+		return fmt.Errorf("struct '%s' implements the method NewValidator() *validator.Validate but returned nil", s.reqType.Name())
 	}
-	return val.StructCtx(r.Context(), s.payload)
+	return val.StructCtx(r.Context(), payload)
 }
 
-func (s *InspectStruct[T, R]) Handle(w http.ResponseWriter, r *http.Request) {
-	s.handlerFunc(w, r, s.payload)
-}
-
-func (s *InspectStruct[T, R]) handleCustom(w http.ResponseWriter, r *http.Request, payload *T) {
-	if err := s.customResponser.Handle(w, r, s.payload); err != nil {
-		logging.Get().Warn("",
-			slog.String("path", r.URL.Path),
-			slog.String("method", s.handlerName),
-			slog.Any("error", err),
-		)
+func (is *InspectStruct[T, R]) buildResponser() error {
+	if is.handlerFunc != nil {
+		return nil
 	}
-}
-func (s *InspectStruct[T, R]) handleSimple(w http.ResponseWriter, r *http.Request, payload *T) {
-	// Simple handler
-	response, status, err := s.responser.Handle(r, s.payload)
-	if responseErr, ok := err.(responseError); ok && status <= 0 {
-		status = responseErr.StatusCode()
-	}
+	var s any = new(T)
 
-	if status <= 0 {
-		status = http.StatusBadGateway
+	if sr, srt := s.(Responser[T, R]); srt {
+		is.handlerFunc = is.handleSimple
+		is.handlerName = runtime.FuncForPC(reflect.ValueOf(sr.Handle).Pointer()).Name()
+		is.responser = sr
+	} else if cr, crt := s.(CustomResponser[T, R]); crt {
+		is.handlerName = runtime.FuncForPC(reflect.ValueOf(cr.Handle).Pointer()).Name()
+		is.handlerFunc = is.handleCustom
+		is.customResponser = cr
+	} else {
+		tcr := reflect.TypeFor[CustomResponser[T, R]]()
+		tsr := reflect.TypeFor[Responser[T, R]]()
+		return fmt.Errorf("type %s should implements interfaces %s or %s", is.reqType.String(), tcr.Name(), tsr.Name())
 	}
 
-	w.WriteHeader(status)
-	if config.DevelopmentMode {
-		w.Header().Add("X-Handler-Name", s.handlerName)
+	if _, ok := s.(Responser[T, R]); !ok {
+		it := reflect.TypeFor[Responser[T, R]]()
+		return fmt.Errorf("struct '%s' must implement the interface %s", is.reqType.String(), it.Name())
 	}
 
-	var responseBody []byte
-	if err != nil {
-		responseBody, _ = json.Marshal(err)
-		w.Write(responseBody)
-	} else if response != nil {
-		responseBody, _ = json.Marshal(response)
-		w.Write(responseBody)
-	}
+	return nil
 }

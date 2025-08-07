@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 	"reflect"
-	"runtime"
 	"sync"
 
 	"github.com/guionardo/go-router/pkg/logging"
@@ -32,28 +31,12 @@ func inspectStructGet[T, R any]() (*InspectStruct[T, R], reflect.Type, error) {
 		logging.Get().Warn("inspectStructget: expected a struct", slog.String("type", t.Name()))
 		return nil, t, fmt.Errorf("expected a struct to make an InspectStruct. Got %s", t.Name())
 	}
-	var (
-		s  any = new(T)
-		is     = &InspectStruct[T, R]{
-			typeName: t.Name(),
-		}
-	)
-
-	if sr, srt := s.(Responser[T, R]); srt {
-		is.handlerFunc = is.handleSimple
-		is.handlerName = runtime.FuncForPC(reflect.ValueOf(sr.Handle).Pointer()).Name()
-	} else if cr, crt := s.(CustomResponser[T, R]); crt {
-		is.handlerName = runtime.FuncForPC(reflect.ValueOf(cr.Handle).Pointer()).Name()
-		is.handlerFunc = is.handleCustom
-	} else {
-		tcr := reflect.TypeFor[CustomResponser[T, R]]()
-		tsr := reflect.TypeFor[Responser[T, R]]()
-		return nil, t, fmt.Errorf("type %s should implements interfaces %s or %s", t.Name(), tcr.Name(), tsr.Name())
+	var is = &InspectStruct[T, R]{
+		reqType: t,
 	}
 
-	if _, ok := s.(Responser[T, R]); !ok {
-		it := reflect.TypeFor[Responser[T, R]]()
-		return nil, t, fmt.Errorf("struct '%s' must implement the interface %s", t.Name(), it.Name())
+	if err := is.buildResponser(); err != nil {
+		return nil, t, err
 	}
 
 	return is, t, nil
