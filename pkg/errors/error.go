@@ -17,7 +17,7 @@ type (
 		Status  int    `json:"status_code,omitempty"`
 	}
 
-	ParseErrorStruct struct {
+	ParseErrorStruct struct { // TODO: Encontrar um nome melhor para esse erro
 		Errors []string `json:"parsing_errors,omitempty"`
 	}
 	Unwrapper interface {

@@ -1,0 +1,30 @@
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-yaml
+    -   id: check-added-large-files
+
+-   repo: local
+    hooks:
+    -   id: go-unit-tests
+        name: go unit tests
+        entry: go test -p=1 ./...
+        pass_filenames: false
+        types: [go]
+        language: system
+        fail_fast: true
+
+    - id: go-mod-tidy
+      entry: go mod tidy
+      language: system
+      pass_filenames: false
+      name: Ensures that the go.mod and go.sum files are in sync with the source code.
+      fail_fast: true
+
+- repo: https://github.com/guionardo/govuln
+  rev: v0.1.0
+  hooks:
+      - id: go-vulncheck

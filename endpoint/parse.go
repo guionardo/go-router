@@ -38,8 +38,8 @@ func (s *Endpoint[T, R]) customValidate(err error, payload *T) error {
 		return errors.Join(err, cv.Validate())
 	}
 	return err
-
 }
+
 func (s *Endpoint[T, R]) postParse(err error, payload *T) error {
 	var is any = payload
 	if pp, ok := is.(postParser); ok {

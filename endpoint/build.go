@@ -94,10 +94,7 @@ func buildStruct[T, R any](t reflect.Type, path string) (*Endpoint[T, R], error)
 	if err == nil {
 		err = checkPathParamFields(path, pathParams, paths, t)
 	}
-	// pathParams, err := path_params.NewPathParams(path)
-	// if err == nil {
-	// 	err = checkPathParamFields(path, paths, pathParams, t)
-	// }
+
 	if err != nil {
 		return nil, err
 	}
@@ -127,13 +124,14 @@ func buildStruct[T, R any](t reflect.Type, path string) (*Endpoint[T, R], error)
 	return is, nil
 }
 
+// reqFunc returns function only if the condition is true, or a noop func if false
 func reqFunc[T any](condition bool, rf func(*http.Request, *T) error) func(*http.Request, *T) error {
-	if !condition {
-		return func(*http.Request, *T) error {
-			return nil
-		}
+	if condition {
+		return rf
 	}
-	return rf
+	return func(*http.Request, *T) error {
+		return nil
+	}
 }
 
 func checkPathParamFields(path string, pathParams []string, paths map[string]int, t reflect.Type) error {

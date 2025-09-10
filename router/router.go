@@ -6,10 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/guionardo/go-router/endpoint"
 	"github.com/guionardo/go-router/pkg/logging"
-	"github.com/guionardo/go-router/pkg/path_params"
 )
 
 type (
@@ -50,31 +48,25 @@ func (r *Router) Get(endpoints ...endpoint.HandlerStruct) *Router {
 	return r
 }
 
+func (r *Router) Post(endpoints ...endpoint.HandlerStruct) *Router {
+	for _, endpoint := range endpoints {
+		r.Add(http.MethodPost, endpoint)
+	}
+	return r
+}
+
 func (r *Router) SetupHTTP(h *http.ServeMux) {
 	for method, handlers := range r.endpoints {
 		for path, handler := range handlers {
-			logging.Get().Debug("Route", slog.String("method", method), slog.String("path", path), slog.String("handler", handler.HandlerName()))
+			logAddHandler(method, path, handler)
 			h.HandleFunc(fmt.Sprintf("%s %s", method, path), handler.Handle)
 		}
 	}
 }
 
-func (r *Router) SetupGin(h *gin.Engine) {
-	for method, handlers := range r.endpoints {
-		for path, handler := range handlers {
-			logging.Get().Debug("Route", slog.String("method", method), slog.String("path", path), slog.String("handler", handler.HandlerName()))
-			// TODO: Fix path to use :params
-			path, err := path_params.InvalidatePathToGin(path)
-			if err == nil {
-				h.Handle(method, path, func(c *gin.Context) {
-					// Fix params into http.Request from gin.Context
-					for _, pp := range handler.PathParams() {
-						c.Request.SetPathValue(pp, c.Param(pp))
-					}
-
-					handler.Handle(c.Writer, c.Request)
-				})
-			}
-		}
-	}
+func logAddHandler(method string, path string, handler endpoint.HandlerStruct) {
+	logging.Get().Debug("Route",
+		slog.String("method", method),
+		slog.String("path", path),
+		slog.String("handler", handler.HandlerName()))
 }
