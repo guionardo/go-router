@@ -42,6 +42,7 @@ func NewParserFromType(t reflect.Type) Parser {
 
 	p := &ConcreteParser{
 		castTempl: "%s",
+		imports:   set.New[string](),
 	}
 	switch t.Kind() {
 	case reflect.Int:

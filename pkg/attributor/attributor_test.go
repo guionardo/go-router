@@ -28,11 +28,11 @@ func Test_attributor_Create(t *testing.T) {
 
 	t.Run("numeric_id", func(t *testing.T) {
 		at := a.Create(fields[0], "h", `"1"`)
-		assert.Contains(t, at, "h.NumericId = value")
+		assert.Contains(t, at, "func () error { return tools.ParseInt(\"NumericId\",\"1\",&h.NumericId)}")
 	})
 	t.Run("order", func(t *testing.T) {
 		at := a.Create(fields[1], "h", `"1"`)
-		assert.Contains(t, at, "h.Order = value")
+		assert.Contains(t, at, "func () error { return tools.ParseUInt(\"Order\",\"1\",&h.Order)}")
 	})
 
 }

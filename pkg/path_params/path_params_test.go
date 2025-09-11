@@ -17,7 +17,7 @@ func Test_createRegexFromPattern(t *testing.T) {
 		{
 			name:          "no_pattern",
 			pattern:       "/users",
-			expectedNames: nil,
+			expectedNames: []string{},
 			testURL:       "/users",
 			shouldMatch:   true,
 		},

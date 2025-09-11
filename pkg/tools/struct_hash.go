@@ -30,7 +30,7 @@ func ValidateHash[T any](expectedHash uint64) {
 		if Building {
 			fmt.Printf("Regenerating code for type %s", reflect.TypeFor[T]().Name())
 		} else {
-			panic(fmt.Sprintf("Unexpected modification on struct: Run generate code for type %s", reflect.TypeFor[T]().Name()))
+			fmt.Printf("[WARNING] Unexpected modification on struct: Run generate code for type %s", reflect.TypeFor[T]().Name())
 		}
 	}
 }

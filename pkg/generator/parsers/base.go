@@ -38,6 +38,9 @@ func (b *Base[T]) addImport(i string) {
 }
 
 func (b *Base[T]) fillImports(inputTypeIsString bool) {
+	if len(b.Imports) == 0 {
+		b.Imports = set.New[string]()
+	}
 	for _, field := range b.fields {
 		k := field.Type
 		if k.Kind() == reflect.Pointer {
