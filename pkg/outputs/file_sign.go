@@ -41,7 +41,7 @@ func IsFileSigned(fileName string) (bool, error) {
 }
 
 func SignFile(fileName string) error {
-	if len(fileName) > 0 {
+	if len(fileName) == 0 {
 		return nil
 	}
 	isFileSigned, err := IsFileSigned(fileName)

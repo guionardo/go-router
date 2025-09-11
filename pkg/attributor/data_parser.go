@@ -82,12 +82,10 @@ func NewParserFromType(t reflect.Type) Parser {
 			if t.Name() == "Duration" {
 				p.imports.Add(tools.ToolsImport)
 				p.attrFunc = `func () error { return tools.ParseDuration("%s",%s,&%s.%s)}`
-
 			}
 		} else {
 			p.imports.Add(tools.ToolsImport)
 			p.attrFunc = `func () error { return tools.ParseInt64("%s",%s,&%s.%s)}`
-
 		}
 	case reflect.Uint64:
 		p.imports.Add(tools.ToolsImport)
@@ -110,7 +108,6 @@ func NewParserFromType(t reflect.Type) Parser {
 			if t.Name() == "Time" {
 				p.imports.Add(tools.ToolsImport)
 				p.attrFunc = `func () error { return tools.ParseTime("%s",%s,&%s.%s)}`
-
 			}
 		}
 
@@ -134,7 +131,6 @@ func (pi *ConcreteParser) Code(receptor, fieldName, value string) string {
 	}
 	return fmt.Sprintf(`if value,err:=%s; err!=nil { return err } else { %s.%s = %s }`,
 		convFunc, receptor, fieldName, valueVar)
-
 }
 
 func (pi *ConcreteParser) Imports() []string {
