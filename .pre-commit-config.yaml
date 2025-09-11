@@ -11,9 +11,9 @@ repos:
       rev: master # Or a specific tag/commit hash for stability
       hooks:
           - id: go-mod-tidy
-        #   - id: golangci-lint # 1.24 - does not have version for 1.25
+          # - id: golangci-lint # 1.24 - does not have version for 1.25
           - id: go-test-mod # This hook runs `go test` for the current module
-            args: ["-v"] # Optional: Add arguments to `go test`, e.g., for verbose output
+            # args: ["-v"] # Optional: Add arguments to `go test`, e.g., for verbose output
 
     - repo: https://github.com/guionardo/govuln
       rev: v0.1.0

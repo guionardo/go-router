@@ -32,6 +32,7 @@ type (
 		attr           attributor.Attributor
 		hasValidations bool
 		outputFiles    *outputs.Outputs[T, R]
+		bodyParser     *parsers.Body[T]
 	}
 )
 
@@ -51,6 +52,7 @@ func New[T mu, R mu]() *Generator[T, R] {
 	pathParser := parsers.NewPath[T]()
 	queryParser := parsers.NewQuery[T]()
 	headerParser := parsers.NewHeader[T]()
+	g.bodyParser = parsers.NewBody[T]()
 	validatorParser := parsers.NewValidators[T]()
 
 	g.hasValidations = validatorParser.HasValidations
@@ -60,6 +62,7 @@ func New[T mu, R mu]() *Generator[T, R] {
 	g.imports.UpdateFrom(queryParser.Imports)
 	g.imports.UpdateFrom(headerParser.Imports)
 	g.imports.UpdateFrom(validatorParser.Imports)
+	g.imports.UpdateFrom(g.bodyParser.Imports)
 
 	return g
 }
@@ -112,6 +115,7 @@ func (g *Generator[T, R]) generateParser() error {
 
 		g.writeImports,
 		g.writeParser,
+		g.writeParserBodyFunc,
 		g.writeHandler,
 		g.writeInit,
 	)
@@ -170,6 +174,7 @@ tools.ValidateHash[%s](0x%x)
 func (g *Generator[T, R]) writeParser() error {
 	g.w.write(
 		g.w.wf("func (h *%s) ParseRequest(r *http.Request) error {", g.tReq.Name()),
+		g.writeParserForBody(),
 		g.writeParserForPath(),
 		g.writeParserForHeaders(),
 		g.writeParseQuery(),
@@ -212,6 +217,20 @@ func (g *Generator[T, R]) writeHandler() error {
 	return nil
 }
 
+func (g *Generator[T, R]) writeParserBodyFunc() error {
+	if bodyFunc := g.bodyParser.ParseBodyFunc(); len(bodyFunc) > 0 {
+		g.w.write(g.w.wf(bodyFunc))
+
+	}
+	return nil
+}
+
+func (g *Generator[T, R]) writeParserForBody() func() error {
+	if len(g.bodyParser.ParseBodyFunc()) > 0 {
+		return g.w.wf(`if err:=h.ParseBody(r); err!=nil {return err}`)
+	}
+	return func() error { return nil }
+}
 func (g *Generator[T, R]) writeParserForPath() func() error {
 
 	attributions := make([]string, 0)
@@ -281,5 +300,5 @@ func (g *Generator[T, R]) GetWriter(fileName string) (fw io.WriteCloser, err err
 	if err != nil {
 		return nil, err
 	}
-	return NewFormatWriter(w), nil
+	return NewFormatWriter(w, fileName), nil
 }

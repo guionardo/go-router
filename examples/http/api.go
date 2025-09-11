@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/guionardo/go-router/endpoint"
-	"github.com/guionardo/go-router/examples/http/payloads"
 	"github.com/guionardo/go-router/router"
 )
 
@@ -21,12 +19,7 @@ func main() {
 	mux := createServer()
 
 	r := router.New(router.Title("PING API"), router.Version("0.1.0"))
-
-	ePing := endpoint.New[payloads.PingRequest, payloads.PingResponse]("/ping")
-	eUser := endpoint.New[payloads.UserRequest, payloads.UserResponse]("/user/{id}")
-	eProduct := endpoint.New[payloads.ProductRequest, payloads.ProductResponse]("/prod/{id}")
-
-	r.Get(ePing, eUser, eProduct)
+	// TODO: Implement example
 
 	r.SetupHTTP(mux)
 

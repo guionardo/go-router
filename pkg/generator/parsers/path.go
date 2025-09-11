@@ -11,17 +11,3 @@ func NewPath[T any]() *Path[T] {
 
 	return p
 }
-
-// func (p *Path[T]) Attributions() []string {
-// 	attributions := make([]string, 0)
-
-// 	for field, tagValue := range p.Fields() {
-// 		attributions = append(attributions, createAttribuition(field, "h", `r.PathValue("%s")`, tagValue))
-// 	}
-// 	if len(attributions) > 0 {
-// 		attributions = append([]string{"", "// path"}, attributions...)
-
-// 	}
-// 	return attributions
-// }
-// TODO: Remover código não utilizado

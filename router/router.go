@@ -6,14 +6,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/guionardo/go-router/endpoint"
 	"github.com/guionardo/go-router/pkg/logging"
 )
 
 type (
 	Router struct {
 		info      *RouterInfo
-		endpoints map[string]map[string]endpoint.HandlerStruct
+		endpoints map[string]map[string]Handler
 	}
 	RouterOption func(*Router)
 )
@@ -21,7 +20,7 @@ type (
 func New(options ...RouterOption) *Router {
 	r := &Router{
 		info:      &RouterInfo{},
-		endpoints: make(map[string]map[string]endpoint.HandlerStruct),
+		endpoints: make(map[string]map[string]Handler),
 	}
 	for _, option := range options {
 		option(r)
@@ -29,29 +28,25 @@ func New(options ...RouterOption) *Router {
 	return r
 }
 
-func (r *Router) Add(method string, ep endpoint.HandlerStruct) *Router {
+func (r *Router) Add(method string, path string, handler Handler) *Router {
 	method = strings.ToUpper(method)
 	msh, ok := r.endpoints[method]
 	if !ok {
-		msh = make(map[string]endpoint.HandlerStruct)
+		msh = make(map[string]Handler)
 		r.endpoints[method] = msh
 	}
-	msh[ep.GetPath()] = ep
+	msh[path] = handler
 
 	return r
 }
 
-func (r *Router) Get(endpoints ...endpoint.HandlerStruct) *Router {
-	for _, endpoint := range endpoints {
-		r.Add(http.MethodGet, endpoint)
-	}
+func (r *Router) Get(path string, handler Handler) *Router {
+	r.Add(http.MethodGet, path, handler)
 	return r
 }
 
-func (r *Router) Post(endpoints ...endpoint.HandlerStruct) *Router {
-	for _, endpoint := range endpoints {
-		r.Add(http.MethodPost, endpoint)
-	}
+func (r *Router) Post(path string, handler Handler) *Router {
+	r.Add(http.MethodPost, path, handler)
 	return r
 }
 
@@ -64,9 +59,10 @@ func (r *Router) SetupHTTP(h *http.ServeMux) {
 	}
 }
 
-func logAddHandler(method string, path string, handler endpoint.HandlerStruct) {
+func logAddHandler(method string, path string, handler Handler) {
 	logging.Get().Debug("Route",
 		slog.String("method", method),
 		slog.String("path", path),
-		slog.String("handler", handler.HandlerName()))
+		// slog.String("handler", handler.HandlerName()))
+	)
 }

@@ -8,14 +8,16 @@ import (
 )
 
 type FormatWritter struct {
-	data []byte
-	w    io.WriteCloser
+	data     []byte
+	w        io.WriteCloser
+	fileName string
 }
 
-func NewFormatWriter(w io.WriteCloser) io.WriteCloser {
+func NewFormatWriter(w io.WriteCloser, fileName string) io.WriteCloser {
 	return &FormatWritter{
-		data: make([]byte, 0),
-		w:    w,
+		data:     make([]byte, 0),
+		w:        w,
+		fileName: fileName,
 	}
 }
 
@@ -27,8 +29,11 @@ func (fw *FormatWritter) Write(data []byte) (int, error) {
 func (fw *FormatWritter) Close() error {
 	out, err := GoFormat(fw.data)
 	if err != nil {
+		os.WriteFile(fw.fileName+".err", fw.data, 0644)
+		os.Remove(fw.fileName)
 		return err
 	}
+	os.Remove(fw.fileName+".err")
 	n, err := fw.w.Write(out)
 	if err == nil && n != len(out) {
 		err = fmt.Errorf("expected writing %d bytes but %d as written", len(out), n)

@@ -32,7 +32,7 @@ func TestNewFormatWriter(t *testing.T) {
 	tmpOutFile, err := os.CreateTemp(tmp, "go_fmt_*.go")
 	assert.NoError(t, err)
 
-	fw := NewFormatWriter(tmpOutFile)
+	fw := NewFormatWriter(tmpOutFile, tmpOutFile.Name())
 	_, err = fw.Write([]byte(source))
 	assert.NoError(t, err)
 

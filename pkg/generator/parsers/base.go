@@ -34,6 +34,9 @@ func (b *Base[T]) readFields(tag string) {
 }
 
 func (b *Base[T]) addImport(i string) {
+	if len(b.Imports) == 0 {
+		b.Imports = set.New[string]()
+	}
 	b.Imports.Add(i)
 }
 

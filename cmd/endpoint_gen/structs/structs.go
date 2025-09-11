@@ -23,6 +23,12 @@ type RequestStruct struct {
 	Value      float64       `header:"value"`
 	NumberByte byte          `header:"number_byte"`
 	NumberBig  uint64        `query:"number_big"`
+	// Body       *Body         `body:"body"`
+	BodyField []byte `body:"body_field"`
+}
+
+type Body struct {
+	Name string
 }
 
 //easyjson:json
