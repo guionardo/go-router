@@ -29,6 +29,19 @@ func (lrw *loggingResponseWriter) Write(b []byte) (int, error) {
 }
 
 // LogMiddleware creates a middleware that logs HTTP requests and responses.
+// Example:
+//
+//	mux := http.NewServeMux()
+//	mux.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+//		_, _ = w.Write([]byte("pong"))
+//	})
+//	// Wrap the mux with the logging middleware
+//	loggedMux := LogMiddleware(mux)
+//	log.Println("Server starting on :8080")
+//	err := http.ListenAndServe(":8080", loggedMux)
+//	if err != nil {
+//		log.Fatalf("Server failed: %v", err)
+//	}
 func LogMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -48,19 +61,3 @@ func LogMiddleware(next http.Handler) http.Handler {
 		)
 	})
 }
-
-/*
-mux := http.NewServeMux()
-	mux.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte("pong"))
-	})
-
-	// Wrap the mux with the logging middleware
-	loggedMux := LogMiddleware(mux)
-
-	log.Println("Server starting on :8080")
-	err := http.ListenAndServe(":8080", loggedMux)
-	if err != nil {
-		log.Fatalf("Server failed: %v", err)
-	}
-*/

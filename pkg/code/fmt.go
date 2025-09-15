@@ -1,4 +1,4 @@
-package generator
+package code
 
 import (
 	"fmt"
@@ -29,11 +29,11 @@ func (fw *FormatWritter) Write(data []byte) (int, error) {
 func (fw *FormatWritter) Close() error {
 	out, err := GoFormat(fw.data)
 	if err != nil {
-		os.WriteFile(fw.fileName+".err", fw.data, 0644)
-		os.Remove(fw.fileName)
+		_ = os.WriteFile(fw.fileName+".err", fw.data, 0644)
+		_ = os.Remove(fw.fileName)
 		return err
 	}
-	os.Remove(fw.fileName+".err")
+	_ = os.Remove(fw.fileName + ".err")
 	n, err := fw.w.Write(out)
 	if err == nil && n != len(out) {
 		err = fmt.Errorf("expected writing %d bytes but %d as written", len(out), n)
@@ -57,8 +57,8 @@ func GoFormat(data []byte) (out []byte, err error) {
 		return nil, err
 	}
 	defer func() {
-		f.Close()
-		os.Remove(f.Name())
+		_ = f.Close()
+		_ = os.Remove(f.Name())
 	}()
 	n, err := f.Write(data)
 	if err == nil && n != len(data) {
@@ -67,7 +67,7 @@ func GoFormat(data []byte) (out []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	f.Close()
+	_ = f.Close()
 	cmd := exec.Command("go", "fmt", f.Name())
 	output, err := cmd.CombinedOutput()
 	if err == nil {

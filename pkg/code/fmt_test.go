@@ -1,4 +1,4 @@
-package generator
+package code
 
 import (
 	"os"
@@ -18,7 +18,6 @@ fmt.Printf("check(2)=%t\n",check(2))
 }`
 
 func TestGoFormat(t *testing.T) {
-
 	out, err := GoFormat([]byte(source))
 	assert.NoError(t, err)
 

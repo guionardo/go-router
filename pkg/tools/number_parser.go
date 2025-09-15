@@ -35,7 +35,7 @@ func ParseInt32(fieldName, s string, v *int32) error {
 }
 func ParseInt64(fieldName, s string, v *int64) error {
 	va, err := strconv.ParseInt(s, 0, 64)
-	*v = int64(va)
+	*v = va
 	return NewParseError(fieldName, err)
 }
 
@@ -63,7 +63,7 @@ func ParseUInt32(fieldName, s string, v *uint32) error {
 }
 func ParseUInt64(fieldName, s string, v *uint64) error {
 	va, err := strconv.ParseUint(s, 0, 64)
-	*v = uint64(va)
+	*v = va
 	return NewParseError(fieldName, err)
 }
 

@@ -23,5 +23,5 @@ func main() {
 
 	r.SetupHTTP(mux)
 
-	http.ListenAndServe(":8080", mux)
+	panic(http.ListenAndServe(":8080", mux))
 }

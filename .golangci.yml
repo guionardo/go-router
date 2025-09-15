@@ -1,0 +1,54 @@
+version: "2"
+linters:
+  enable:
+    - copyloopvar
+    # - durationcheck
+    - forcetypeassert
+    - godot
+    - makezero
+    - misspell
+    - nilerr
+    - predeclared
+    - staticcheck
+    # - unconvert
+    # - unparam
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+  settings:
+    godot:
+      # Comments to be checked: `declarations`, `toplevel`, `noinline` or `all`.
+      # Default: declarations
+      scope: toplevel
+      # List of regexps for excluding particular comment lines from check.
+      # Default: []
+      exclude:
+        # Exclude todo and fixme comments.
+        - "^fixme:"
+        - "^todo:"
+        - "^signature:"
+      # Check that each sentence ends with a period.
+      # Default: true
+      period: false
+      # Check that each sentence starts with a capital letter.
+      # Default: false
+      capital: true
+issues:
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofmt
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+const SignatureHeader = "//SIGNATURE:"
+
 type SignatureError struct {
 	fileName, expected, hash string
 }
@@ -24,7 +26,7 @@ func IsFileSigned(fileName string) (bool, error) {
 	}
 
 	data := bytes.SplitN(content, []byte{'\n'}, 2)
-	signature, found := strings.CutPrefix(string(data[0]), "// SIGNATURE:")
+	signature, found := strings.CutPrefix(string(data[0]), SignatureHeader)
 	if !found || len(data) < 2 {
 		return false, nil
 	}
@@ -61,10 +63,10 @@ func SignFile(fileName string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	_, err = fmt.Fprintf(f, "// SIGNATURE:%s\n", hash)
+	_, err = fmt.Fprintf(f, "%s%s\n", SignatureHeader, hash)
 	if err == nil {
 		_, err = f.Write(content)
 	}
+	_ = f.Close()
 	return err
 }

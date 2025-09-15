@@ -1,8 +1,9 @@
-package generator
+package tools_test
 
 import (
 	"testing"
 
+	"github.com/guionardo/go-router/pkg/tools"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,7 +18,7 @@ func TestToSnakeCase(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			got := toSnakeCase(tt.input)
+			got := tools.ToSnakeCase(tt.input)
 			assert.Equal(t, tt.expected, got)
 		})
 	}

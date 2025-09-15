@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	reflections "github.com/guionardo/go-router/pkg/reflect"
+	"github.com/guionardo/go-router/pkg/tools"
 )
 
 type (
@@ -18,7 +19,7 @@ type (
 		ParseRequestFile string // file that contains the generated method ParseRequest(r *http.Request) error
 		ProcessFile      string // file that contains the method Process(r *http.Request, payload T) error
 	}
-	Processer[T, R any] interface {
+	Processor[T, R any] interface {
 		Process(r *http.Request) (T, error)
 	}
 )
@@ -39,8 +40,9 @@ func New[T, R any]() *Outputs[T, R] {
 
 	cuttedOrigin, _ := strings.CutSuffix(o.origin, ".go")
 
-	o.ProcessFile = cuttedOrigin + "_process.go"
-	o.ParseRequestFile = fmt.Sprintf("%s_parser.go", cuttedOrigin)
+	structNameToFile := tools.ToSnakeCase(tType.Type.Name())
+	o.ProcessFile = fmt.Sprintf("%s_%s_process.go", cuttedOrigin, structNameToFile)
+	o.ParseRequestFile = fmt.Sprintf("%s_%s_parser.go", cuttedOrigin, structNameToFile)
 	o.PackageName = path.Base(tType.PackageName)
 	return o
 }

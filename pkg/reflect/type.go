@@ -9,10 +9,9 @@ import (
 	"os"
 	"path"
 	"reflect"
-	"runtime"
 	"strings"
 
-	pathtools "github.com/guionardo/go/pkg/path_tools"
+	"github.com/guionardo/go-router/pkg/tools"
 )
 
 type Type[T any] struct {
@@ -26,8 +25,6 @@ type Type[T any] struct {
 	IsStruct          bool
 	Error             error
 }
-
-var fsRoot string
 
 func New[T any]() *Type[T] {
 	tp := reflect.TypeFor[T]()
@@ -47,10 +44,10 @@ func NewFromType[T any](tp reflect.Type) *Type[T] {
 		IsStruct:    tp.Kind() == reflect.Struct,
 	}
 
-	root, err := getProjectRootFolder()
+	root, err := tools.GetProjectRootFolder()
 	if err == nil {
 		t.ProjectRootFolder = root
-		t.ModuleName, err = getModuleName(path.Join(root, "go.mod"))
+		t.ModuleName, err = tools.GetModuleName(path.Join(root, "go.mod"))
 		if err == nil {
 			sourceFolder, found := strings.CutPrefix(tp.PkgPath(), t.ModuleName)
 			if !found {
@@ -142,39 +139,4 @@ func findSourceInFileForType(fileName string, structName string) error {
 	}
 	return nil
 
-}
-func getProjectRootFolder() (root string, err error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	current := cwd
-	for len(current) > len(fsRoot) {
-		if pathtools.FileExists(path.Join(current, "go.mod")) {
-			return current, nil
-		}
-		current = path.Dir(current)
-	}
-	return "", fmt.Errorf("could not find go.mod from current path: %s", cwd)
-}
-
-func getModuleName(goModFile string) (string, error) {
-	content, err := os.ReadFile(goModFile)
-	if err != nil {
-		return "", err
-	}
-	for row := range strings.SplitSeq(string(content), "\n") {
-		if module, found := strings.CutPrefix(row, "module "); found {
-			return strings.TrimSpace(module), nil
-		}
-	}
-	return "", fmt.Errorf("couldn't find module param in %s", goModFile)
-}
-
-func init() {
-	if runtime.GOOS == "windows" {
-		fsRoot = "C:\\"
-	} else {
-		fsRoot = "/"
-	}
 }

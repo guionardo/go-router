@@ -86,5 +86,5 @@ func NewValue(value any, field reflect.Value) (reflect.Value, error) {
 		}
 	}
 
-	return reflect.ValueOf(nil), fmt.Errorf("unexpected convertion %s to %s", reflect.TypeOf(value).Name(), kind.String())
+	return reflect.ValueOf(nil), fmt.Errorf("unexpected conversion %s to %s", reflect.TypeOf(value).Name(), kind.String())
 }

@@ -4,6 +4,11 @@
 help: ## Display this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' Makefile | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
+.PHONY: setup
+setup: ## Install dev dependencies
+    curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.4.0
+	go install github.com/guionardo/govuln@latest
+
 .PHONY: run
 run: ## Run HTTP server locally on port 8080
 	@go run cmd/server/main.go
@@ -19,7 +24,7 @@ coverage: ## Generate test coverage in the development environment
 
 .PHONY: lint
 lint: ## Execute syntatic analysis in the code and autofix minor problems
-	@golangci-lint -c .code_quality/.golangci.yml run --fix
+	@golangci-lint run --fix
 
 .PHONY: ci
 ci: lint test ## Execute the tests and lint commands

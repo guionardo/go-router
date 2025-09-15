@@ -12,6 +12,7 @@ import (
 // Request Sample Structure
 //
 //easyjson:json
+//gorouter:path=/home
 type RequestStruct struct {
 	Id         int           `path:"id"`    // Identificator
 	Name       string        `query:"name"` // User name
@@ -32,6 +33,7 @@ type Body struct {
 }
 
 //easyjson:json
+//gorouter:responseTo=RequestStruct
 type ResponseStruct struct {
 	Success bool
 }
