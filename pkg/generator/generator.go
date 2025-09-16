@@ -72,10 +72,6 @@ func (g *Generator[T, R]) addType(t reflect.Type) reflect.Type {
 		panic(tType.Error)
 	}
 
-	//TODO: Validar
-	// reader, _ := NewDocReader(tType.SourceFile)
-	// reader.Print()
-
 	return tType.Type
 }
 

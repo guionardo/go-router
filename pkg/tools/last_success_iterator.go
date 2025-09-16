@@ -36,7 +36,8 @@ func (l *LastSuccessIterator[T]) Iter() iter.Seq[T] {
 			current = []T{l.itens[lastIndex]}
 			after   = l.itens[lastIndex+1:]
 		)
-		l.itens = append(current, append(before, after...)...)
+		current = append(current, append(before, after...)...)
+		l.itens = current
 		l.lock.Unlock()
 	}
 }

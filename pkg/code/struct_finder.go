@@ -63,7 +63,6 @@ func findStructsFromFile(fileName, rootFolder, moduleName string) (structs []*Go
 	const logHead = "findingStructs "
 
 	logger := slog.With(slog.String("fileName", fileName))
-	// TODO: Implementar busca pelo comentário //gorouter:path
 
 	fset := token.NewFileSet()
 
@@ -82,8 +81,6 @@ func findStructsFromFile(fileName, rootFolder, moduleName string) (structs []*Go
 		packageName     string
 		goRouterValues  map[string]string
 	)
-
-	// docText := make([]string, 0, 4)
 
 	ast.Inspect(f, func(n ast.Node) bool {
 		if n == nil {
@@ -216,15 +213,16 @@ func (s GoRouterStructs) IsValid() error {
 
 }
 
-func (s GoRouterStructs) getStructByName(packageName, structName string) *GoRouterStruct {
-	structNames := strings.Split(structName, ",")
-	i := slices.IndexFunc(s, func(st *GoRouterStruct) bool {
-		return st.PackageName == packageName && slices.Contains(structNames, st.StructName)
-	})
-	if i < 0 {
-		return nil
+func (s GoRouterStructs) GetRequestResponsePairStructs() iter.Seq2[*GoRouterStruct, *GoRouterStruct] {
+	return func(yield func(req, resp *GoRouterStruct) bool) {
+		for _, st := range s {
+			if st.AnsweredBy != nil {
+				if !yield(st, st.AnsweredBy) {
+					return
+				}
+			}
+		}
 	}
-	return s[i]
 }
 
 func (s GoRouterStructs) getResponseStructByRequest(packageName, structName string) *GoRouterStruct {
@@ -237,14 +235,13 @@ func (s GoRouterStructs) getResponseStructByRequest(packageName, structName stri
 	return s[i]
 }
 
-func (s GoRouterStructs) GetRequestResponsePairStructs() iter.Seq2[*GoRouterStruct, *GoRouterStruct] {
-	return func(yield func(req, resp *GoRouterStruct) bool) {
-		for _, st := range s {
-			if st.AnsweredBy != nil {
-				if !yield(st, st.AnsweredBy) {
-					return
-				}
-			}
-		}
+func (s GoRouterStructs) getStructByName(packageName, structName string) *GoRouterStruct {
+	structNames := strings.Split(structName, ",")
+	i := slices.IndexFunc(s, func(st *GoRouterStruct) bool {
+		return st.PackageName == packageName && slices.Contains(structNames, st.StructName)
+	})
+	if i < 0 {
+		return nil
 	}
+	return s[i]
 }

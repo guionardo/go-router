@@ -12,6 +12,14 @@ linters:
     - staticcheck
     # - unconvert
     # - unparam
+    # - cyclop
+    - decorder
+    # - dupl
+    - errname
+    # - funcorder
+    - gocritic
+    # - godox
+    - gosec
   exclusions:
     generated: lax
     presets:
